@@ -3,9 +3,11 @@
 <h1> 科学上网搭建 </h1>
 
 作者：左耳朵耗子 [http://coolshell.cn](http://coolshell.cn)
-更新时间：2023-05-02
+更新：HarmonyChang
+创建时间：2023-05-02
+更新时间：2026-05-27
 
-这篇文章可以写的更好，欢迎到 [https://github.com/haoel/haoel.github.io](https://github.com/haoel/haoel.github.io) 更新
+这篇文章可以写的更好，欢迎到 [https://github.com/HarmonyChang/harmonychang.github.io](https://github.com/HarmonyChang/harmonychang.github.io) 更新
 
 ![](./images/cover.webp)
 
@@ -63,6 +65,7 @@
 
 对我来说，科学上网很重要，下面罗列一下需要科学上网，我才能真正学习工作和生活的网站：
 
+- 当前最厉害的 AI 模型所在外网，Claude、ChatGPT、Gemini等都是我们常用的工具。
 - Youtube 和 Vimeo 上的各种大会和教学视频，除了我自己要学，我的孩子也要学。
 - Wikipedia 维基百科是我目前唯一信得过的百科全书，我在上面可以比较系统地翻阅各种词条。
 - SlideShare 上有很多的技术文档和资料的PPT，是我的知识学习的地方。
@@ -111,14 +114,14 @@
   - **线路**。 经过我长期的实践，GIA CN2 的线路是非常好的。**但是你要小心，很多VPS提供商会在宣传上说自己是 CN2 的线路，但是，实际上并不是**。
   -  **原生 IP**。很多海外的应用都有地区限制，会屏蔽IP，所以，使用美国的原生 IP 也是很重要的。
 
-上述的这些东西在后面都会讲到。**另外，VPS 建议安装成 Ubuntu，版本用 18.04，20.04，22.04 都行**。
+上述的这些东西在后面都会讲到。**另外，VPS 建议安装成 Ubuntu，版本用 ~~18.04，20.04，~~ 22.04，24.04 都行**。
 
 
 ### 2.1 常规VPS
 
 对于常规 VPS，主要是一个云服务提供商，大的原厂商都提供免费使用和赠金，所以，可以白嫖一段时间。
 
-- [AWS LightSail](https://lightsail.aws.amazon.com/) 是一个非常便宜好用的服务，最低配置一个月 $3.5 美金，流量不限，目前的Zone不多，推荐使用日本，新加坡或美国俄勒冈（支持银联卡）。现对 2021/8/7 之后使用 LightSail 的用户提供3个月的免费试用。
+- [AWS LightSail](https://lightsail.aws.amazon.com/) 是一个非常便宜好用的服务，最低配置一个月 $3.5 美金，流量不限，目前的Zone不多，推荐使用日本，新加坡或美国俄勒冈（支持银联卡、VISA卡）。现对 2021/8/7 之后使用 LightSail 的用户提供**90天**的免费试用。（**这是目前的主力，快到期前使用邮箱继续注册后可以继续免费试用**）
 - [Microsoft Azure](https://azure.microsoft.com/zh-cn/)提供免费一年的服务（B1S实例），而且每个月有 100G 的免费流量，并赠送200刀赠金。（需要国际信用卡）
 - [Google Cloud Platform](https://cloud.google.com/)提供免费试用，赠送300刀赠金（需要国际信用卡）
 - [Oracle Cloud](https://www.oracle.com/cloud/free/)两台VPS无限期使用，可选美日韩等地（需要国际信用卡）
@@ -162,7 +165,36 @@
 
 ## 3. 搭建相关代理服务
 
-> 注：如下的搭建和安装脚本可参看本库的 scripts 目录下的脚本，如： [Ubuntu 18.04 Installation Script](https://github.com/haoel/haoel.github.io/blob/master/scripts/install.ubuntu.18.04.sh) （感谢网友 [@gongzili456](https://github.com/gongzili456) 开发），另外，**这个脚本可能年久失修，不一定能用，但是可以参考，如果有问题，可以提交 PR**。
+> 注：如下的搭建和安装脚本可参看本库的 scripts 目录下的脚本，如： [Ubuntu 18.04 Installation Script](https://github.com/HarmonyChang/harmonychang.github.io/blob/master/scripts/install.ubuntu.18.04.sh) （感谢网友 [@gongzili456](https://github.com/gongzili456) 开发），另外，**这个脚本只适用于Ubuntu的18.04、20.04、22.04，24.04不适用**。
+> Ubuntu 24.04系统请使用专门修改后的脚本：[Ubuntu 24.04 Installation Script](https://github.com/HarmonyChang/harmonychang.github.io/blob/master/scripts/install.ubuntu.24.04.sh) 。
+### 3.0 直接通过shell脚本执行
+
+通过 `sudo bash install.ubuntu.24.04.sh` 执行。一个脚本即可搞定下面所有的任务。
+
+界面参考：
+
+```
+菜单选项
+
+1) 安装 TCP BBR 拥塞控制算法
+2) 安装 Docker 服务程序
+3) 创建 SSL 证书
+4) 安装 Gost HTTP/2 代理服务
+5) 安装 ShadowSocks 代理服务
+6) 安装 VPN/L2TP 服务
+7) 安装 Brook 代理服务
+8) 创建证书更新 CronJob
+9) 退出
+Please select a option:
+```
+
+按照顺序安装 1、2、3、4、8 即可。根据耗子叔的建议，不推荐使用 ShadowSocks 和 VPN/L2TP。
+
+其中：
+1. SSL证书需要确保已经在Cloudflare中把域名解析到服务器ip上。
+2. 第3步执行前需要确定域名已经解析成功。另外中途可以会出现一个错误警告，不用理会继续进行即可。
+3. 第4步中需要设置域名用户名等信息，一定要好自己记录好
+4. 确保在ligntsail的联网选项卡中，允许443端口访问。（开启静态IP）
 
 ### 3.1 设置Docker服务
 
@@ -185,11 +217,11 @@ BBR之后移植入Linux内核4.9版本，并且对于QUIC可用。
 
 为了更为的隐蔽，使用 HTTPS 服务，你需要完成如下工作：
 
-1） 一个域名（可以上 [GoDaddy](https://www.godaddy.com/en-us)，但一定要使用美国版）
+1） 一个域名（可以上 [GoDaddy](https://www.godaddy.com/en-us)，但一定要使用美国版），各种后缀都可以，选一个最便宜的即可。
 
 2） 然后在 GoDaddy 上修改域名解析服务器，把其指向 [Cloudflare](https://cloudflare.com) —— 当你注册完 Cloudflare 帐号后，Cloudflare 会告诉你怎么做。
 
-3）然后，你在 Cloudflare 上创建一个子域名解析到你的 VPS 上 IP 上（注：不要开启 Cloudflare 的 Proxy 模式）
+3） 然后，你在 Cloudflare 上创建一个子域名解析到你的 VPS 上 IP 上（注：不要开启 Cloudflare 的 Proxy 模式）
 
 4）最后，使用 [Let's Encrypt](https://letsencrypt.org) 来签 一个证书。使用 Let's Encrypt 证书你需要在服务器上安装一个 [certbot](https://certbot.eff.org/instructions)，点击 [certbot](https://certbot.eff.org/instructions) 这个链接，你可以选择你的服务器，操作系统，然后就跟着指令走吧。
 
@@ -357,6 +389,53 @@ sudo docker run -d  --privileged \
 或是，干脆使用 gost 客户端在本机启动一个 SOCKS 5的代理服务用来代替（`gost -L socks5://:1080 -F 'https://USER:PASS@DOMAIN:443'`），然后在 SwitchyOmega 配置代理为'127.0.0.1:1080'即可。
 
 #### 4.1.2 全局 Clash 代理设置
+
+**2026.05.27 更新：clash 已经停止维护，建议迁移到[Clash Verge](https://github.com/clash-verge-rev/clash-verge-rev)**。现在后只需要配置订阅文件即可。具体配置可以参考：
+
+```
+port: 7890
+socks-port: 7891
+allow-lan: false
+mode: rule
+log-level: info
+external-controller: 127.0.0.1:9090
+
+# 代理节点配置
+proxies:
+  - name: "My-HTTPS-Proxy"
+    type: http
+    server: yourdomain.com
+    port: 443
+    username: "username"
+    password: "password"
+    tls: true
+    sni: yourdomain.com
+
+# 代理策略组配置
+proxy-groups:
+  - name: "PROXIES"
+    type: select
+    proxies:
+      - "My-HTTPS-Proxy"
+      - "DIRECT"
+
+# 路由规则
+rules:
+  # 局域网及本地地址直连
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,17.0.0.0/8,DIRECT
+  - IP-CIDR,100.64.0.0/10,DIRECT
+
+  # 最终规则（除了中国区的IP之外的，全部代理）
+  - GEOIP,CN,DIRECT
+  - MATCH,PROXIES
+```
+
+> 以下原来内容
 
 在电脑上，使用 [Clash](https://github.com/Dreamacro/clash) 一个就可以了。Clash 支持很多翻墙协议：ShadowSocks(R), Vmess, Socks5, HTTP(s)，Snell，Trojan。 而且支持多个代理服务器的分组和负载均衡。
 
@@ -541,6 +620,8 @@ rules:
 
 #### 4.2.1 Android
 
+**2026.05.27 更新：建议使用[surfboard](https://github.com/getsurfboard/surfboard)**。
+
 - [Clash for Android](https://github.com/Kr328/ClashForAndroid)
 - Shadowsocks + ShadowsocksGostPlugin
   - 安装Shadowsocks (Google Play Store或[github页面](https://github.com/shadowsocks/shadowsocks-android))
@@ -563,7 +644,7 @@ rules:
 关于如何注册美区 Apple ID账号，你需要有两个前提条件：
 
 - 你需要有一个美国的手机号码。
-- 还需要有一个美国的 PayPal 账号。
+- 还需要有一个美国的 PayPal 账号（或者VISA卡）。
 
 关于如何搞到美国的手机号以及美国的 PayPal 账号以及其必要性，可以参看[5. 美国手机和支付]((#5-美国手机和支付))
 
