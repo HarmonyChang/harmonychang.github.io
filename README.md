@@ -165,8 +165,8 @@
 
 ## 3. 搭建相关代理服务
 
-> 注：如下的搭建和安装脚本可参看本库的 scripts 目录下的脚本，如： [Ubuntu 18.04 Installation Script](https://github.com/HarmonyChang/harmonychang.github.io/blob/master/scripts/install.ubuntu.18.04.sh) （感谢网友 [@gongzili456](https://github.com/gongzili456) 开发），另外，**这个脚本只适用于Ubuntu的18.04、20.04、22.04，24.04不适用**。
-> Ubuntu 24.04系统请使用专门修改后的脚本：[Ubuntu 24.04 Installation Script](https://github.com/HarmonyChang/harmonychang.github.io/blob/master/scripts/install.ubuntu.24.04.sh) 。
+> 注：如下的搭建和安装脚本可参看本库的 scripts 目录下的脚本，如： [Ubuntu 18.04 Installation Script](https://github.com/HarmonyChang/harmonychang.github.io/blob/main/scripts/install.ubuntu.18.04.sh) （感谢网友 [@gongzili456](https://github.com/gongzili456) 开发），另外，**这个脚本只适用于Ubuntu的18.04、20.04、22.04，24.04不适用**。
+> Ubuntu 24.04系统请使用专门修改后的脚本：[Ubuntu 24.04 Installation Script](https://github.com/HarmonyChang/harmonychang.github.io/blob/main/scripts/install.ubuntu.24.04.sh) 。
 ### 3.0 直接通过shell脚本执行
 
 通过 `sudo bash install.ubuntu.24.04.sh` 执行。一个脚本即可搞定下面所有的任务。
@@ -1552,7 +1552,8 @@ docker run --rm curlimages/curl --connect-timeout 2 -x "socks5://172.17.0.2:4000
 
 上述的搭建和安装脚本可参看本库的 scripts 目录下的脚本（感谢网友 [@gongzili456](https://github.com/gongzili456) 开发）
 
--  [Ubuntu 18.04 Installation Script](https://github.com/haoel/haoel.github.io/blob/master/scripts/install.ubuntu.18.04.sh)
+-  [Ubuntu 18.04 Installation Script](https://github.com/haoel/haoel.github.io/blob/main/scripts/install.ubuntu.18.04.sh)
+-  [Ubuntu 24.04 Installation Script](https://github.com/haoel/haoel.github.io/blob/main/scripts/install.ubuntu.24.04.sh)
 
 **注意：这个脚本可能年久失修，不一定能用，但是可以参考，如果有问题，可以提交 PR**。
 
