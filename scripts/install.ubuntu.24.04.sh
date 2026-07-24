@@ -4,7 +4,7 @@
 # original author:https://github.com/gongzili456
 # modified by:https://github.com/haoel
 
-# Ubuntu 18.04 系统环境
+# Ubuntu 24.04 系统环境
 
 COLOR_ERROR="\e[38;5;198m"
 COLOR_NONE="\e[0m"
@@ -78,13 +78,17 @@ check_container(){
 }
 
 install_certbot() {
-    echo "开始安装 certbot 命令行工具"
+    echo "开始通过 Snap 安装 certbot 命令行工具"
     sudo apt-get update -qq
-    sudo apt-get install -y software-properties-common
-    sudo add-apt-repository universe
-    sudo add-apt-repository ppa:certbot/certbot
-    sudo apt-get update -qq
-    sudo apt-get install -y certbot
+    sudo apt-get install -y snapd
+    sudo snap install core
+    sudo snap refresh core
+    sudo snap install --classic certbot
+    
+    # 创建软链接，兼容脚本后续 cronjob 中硬编码的 /usr/bin/certbot 路径
+    if [ ! -f /usr/bin/certbot ]; then
+        sudo ln -s /snap/bin/certbot /usr/bin/certbot
+    fi
 }
 
 create_cert() {
