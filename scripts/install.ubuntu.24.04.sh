@@ -3,7 +3,7 @@
 # Author
 # original author:https://github.com/gongzili456
 # modified by:https://github.com/haoel
-# fixed for Ubuntu 24.04 & Refactored for HarmonyChang
+# fixed for Ubuntu 24.04
 
 # Ubuntu 24.04 系统环境
 
@@ -20,7 +20,7 @@ update_core(){
 check_bbr(){
     has_bbr=$(lsmod | grep bbr)
 
-    # 如果已经发现 bbr 模块
+    # 如果已经发现 bbr 进程
     if [ -n "$has_bbr" ] ;then
         echo -e "${COLOR_SUCC}TCP BBR 拥塞控制算法已经启动${COLOR_NONE}"
     else
@@ -40,7 +40,7 @@ start_bbr(){
 }
 
 install_bbr() {
-    # 比较版本号
+    # 比较版本号 (修复多位数时的版本号对比问题)
     if [ "$(printf '%s\n' "$VERSION_MIN" "$VERSION_CURR" | sort -V | head -n1)" = "$VERSION_MIN" ]; then
         check_bbr
     else
@@ -107,10 +107,9 @@ create_cert() {
         return
     fi
 
-    read -r -p "请输入你要使用的域名:" DOMAIN
-    export GLOBAL_DOMAIN="${DOMAIN}"
+    read -r -p "请输入你要使用的域名:" domain
 
-    sudo certbot certonly --standalone -d "${DOMAIN}"
+    sudo certbot certonly --standalone -d "${domain}"
 }
 
 install_gost_http2() {
@@ -125,9 +124,7 @@ install_gost_http2() {
     fi
 
     echo "准备启动 Gost 代理程序,为了安全,需要使用用户名与密码进行认证."
-    read -r -p "请输入你要使用的域名[${GLOBAL_DOMAIN}]：" DOMAIN
-    DOMAIN=${DOMAIN:-$GLOBAL_DOMAIN}
-
+    read -r -p "请输入你要使用的域名：" DOMAIN
     read -r -p "请输入你要使用的用户名:" USER
     read -r -p "请输入你要使用的密码:" PASS
     read -r -p "请输入HTTP/2需要侦听的端口号(443)：" PORT
@@ -147,8 +144,6 @@ install_gost_http2() {
         -v ${CERT_DIR}:${CERT_DIR}:ro \
         --net=host ginuerzh/gost \
         -L "http2://${USER}:${PASS}@${BIND_IP}:${PORT}?cert=${CERT}&key=${KEY}&probe_resist=code:400&knock=www.google.com"
-
-    echo -e "${COLOR_SUCC}Gost HTTP/2 启动成功！提醒：如果连接后单线程下载网速慢，请使用菜单 8 安装 Trojan-Go 服务。${COLOR_NONE}"
 }
 
 install_trojan_go() {
@@ -163,9 +158,7 @@ install_trojan_go() {
     fi
 
     echo "准备启动 Trojan-Go 代理程序,为了安全,需要使用密码进行认证."
-    read -r -p "请输入你要使用的域名[${GLOBAL_DOMAIN}]：" DOMAIN
-    DOMAIN=${DOMAIN:-$GLOBAL_DOMAIN}
-
+    read -r -p "请输入你要使用的域名：" DOMAIN
     read -r -p "请输入你要使用的密码:" PASS
     read -r -p "请输入Trojan需要侦听的端口号(9527)：" PORT
 
@@ -178,19 +171,13 @@ install_trojan_go() {
     CERT=${CERT_DIR}/live/${DOMAIN}/fullchain.pem
     KEY=${CERT_DIR}/live/${DOMAIN}/privkey.pem
 
-    # 检查证书是否存在
-    if [ ! -f "${CERT}" ]; then
-        echo -e "${COLOR_ERROR}未找到域名 ${DOMAIN} 的 SSL 证书文件！请先执行菜单 3 生成证书。${COLOR_NONE}"
-        return
-    fi
-
     sudo mkdir -p /etc/trojan-go
     sudo tee /etc/trojan-go/config.json > /dev/null <<EOF
 {
     "run_type": "server",
     "local_addr": "0.0.0.0",
     "local_port": ${PORT},
-    "remote_addr": "www.baidu.com",
+    "remote_addr": "www.google.com",
     "remote_port": 80,
     "password": [
         "${PASS}"
@@ -208,8 +195,77 @@ EOF
         -v /etc/trojan-go/config.json:/etc/trojan-go/config.json \
         -v ${CERT_DIR}:${CERT_DIR}:ro \
         teddysun/trojan-go
+}
 
-    echo -e "${COLOR_SUCC}Trojan-Go 代理服务部署成功！监听端口: ${PORT}${COLOR_NONE}"
+install_hysteria2() {
+    if ! [ -x "$(command -v docker)" ]; then
+        echo -e "${COLOR_ERROR}未发现 Docker，请先安装 Docker！${COLOR_NONE}"
+        return
+    fi
+
+    if check_container tobyxdd-hysteria2 ; then
+        echo -e "${COLOR_ERROR}Hysteria2 容器已经存在，请先删除容器后再重新安装。${COLOR_NONE}"
+        return
+    fi
+
+    echo "Hysteria2 将复用已有的 Let's Encrypt 证书。"
+    read -r -p "请输入证书对应的域名: " DOMAIN
+    read -r -p "请输入 Hysteria2 认证密码: " PASS
+    read -r -p "请输入 Hysteria2 UDP 监听端口（默认 443）: " PORT
+
+    if [ -z "${DOMAIN}" ] || [ -z "${PASS}" ]; then
+        echo -e "${COLOR_ERROR}域名和认证密码不能为空！${COLOR_NONE}"
+        return
+    fi
+
+    if [[ -z "${PORT// }" ]] || ! [[ "${PORT}" =~ ^[0-9]+$ ]] || ! { [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ]; }; then
+        echo -e "${COLOR_ERROR}端口不合法，使用默认 UDP 端口 443！${COLOR_NONE}"
+        PORT=443
+    fi
+
+    CERT_DIR=/etc/letsencrypt
+    CERT=${CERT_DIR}/live/${DOMAIN}/fullchain.pem
+    KEY=${CERT_DIR}/live/${DOMAIN}/privkey.pem
+
+    if ! sudo test -r "${CERT}" || ! sudo test -r "${KEY}"; then
+        echo -e "${COLOR_ERROR}未找到 ${DOMAIN} 的证书文件，请先创建 SSL 证书。${COLOR_NONE}"
+        return
+    fi
+
+    # Preserve backslashes and quotes in the YAML password scalar.
+    YAML_PASS=${PASS//\\/\\\\}
+    YAML_PASS=${YAML_PASS//\"/\\\"}
+
+    sudo install -d -m 700 /etc/hysteria2
+    sudo tee /etc/hysteria2/config.yaml > /dev/null <<EOF
+listen: :${PORT}
+tls:
+  cert: ${CERT}
+  key: ${KEY}
+auth:
+  type: password
+  password: "${YAML_PASS}"
+EOF
+    sudo chmod 600 /etc/hysteria2/config.yaml
+
+    echo "正在拉取镜像并启动 Hysteria2..."
+    if ! sudo docker run -d --name tobyxdd-hysteria2 \
+        --restart=always \
+        --net=host \
+        -v /etc/hysteria2/config.yaml:/etc/hysteria/config.yaml:ro \
+        -v ${CERT_DIR}:${CERT_DIR}:ro \
+        tobyxdd/hysteria server -c /etc/hysteria/config.yaml; then
+        echo -e "${COLOR_ERROR}Hysteria2 容器创建失败。${COLOR_NONE}"
+        return
+    fi
+
+    sleep 2
+    if [ "$(sudo docker inspect -f '{{.State.Running}}' tobyxdd-hysteria2 2>/dev/null)" = "true" ]; then
+        echo -e "${COLOR_SUCC}Hysteria2 已启动，UDP 端口为 ${PORT}。请在防火墙和云安全组放行该 UDP 端口。${COLOR_NONE}"
+    else
+        echo -e "${COLOR_ERROR}Hysteria2 启动失败，容器日志如下：${COLOR_NONE}"
+        sudo docker logs tobyxdd-hysteria2
+    fi
 }
 
 crontab_exists() {
@@ -217,14 +273,19 @@ crontab_exists() {
 }
 
 create_cron_job(){
-    # 每天凌晨 3:30 自动检查续期。只要未到 30 天窗口期，Certbot 不会触发任何动作，也不会触发 pre-hook 重启容器
-    CRON_CMD="/usr/bin/certbot renew --pre-hook 'docker stop gost-http2 trojan-go 2>/dev/null || true' --post-hook 'docker restart gost-http2 trojan-go 2>/dev/null || true'"
-
-    if ! crontab_exists "certbot renew"; then
-        (sudo crontab -l 2>/dev/null; echo "30 3 * * * ${CRON_CMD} >/dev/null 2>&1") | sudo crontab -
-        echo -e "${COLOR_SUCC}成功安装证书 renew 定时作业 (每天凌晨 3:30 自动检查与续期)！${COLOR_NONE}"
+    # 写入前先检查，避免重复任务。使用更为稳妥的 crontab 操作
+    if ! crontab_exists "certbot renew --force-renewal"; then
+        (sudo crontab -l 2>/dev/null; echo "0 0 1 * * /usr/bin/certbot renew --force-renewal") | sudo crontab -
+        echo -e "${COLOR_SUCC}成功安装证书renew定时作业！${COLOR_NONE}"
     else
-        echo -e "${COLOR_SUCC}证书 renew 定时作业已经成功安装过！${COLOR_NONE}"
+        echo -e "${COLOR_SUCC}证书renew定时作业已经安装过！${COLOR_NONE}"
+    fi
+
+    if ! crontab_exists "docker restart gost-http2 trojan-go tobyxdd-hysteria2"; then
+        (sudo crontab -l 2>/dev/null; echo "5 0 1 * * /usr/bin/docker restart gost-http2 trojan-go tobyxdd-hysteria2 >/dev/null 2>&1") | sudo crontab -
+        echo -e "${COLOR_SUCC}成功安装证书定时更新作业！${COLOR_NONE}"
+    else
+        echo -e "${COLOR_SUCC}证书定时更新作业已经成功安装过！${COLOR_NONE}"
     fi
 }
 
@@ -239,7 +300,7 @@ install_shadowsocks(){
         return
     fi
 
-    echo "准备启动 ShadowSocks 代理程序,为了安全,需要使用密码进行认证."
+    echo "准备启动 ShadowSocks 代理程序,为了安全,需要使用用户名与密码进行认证."
     read -r -p "请输入你要使用的密码:" PASS
     read -r -p "请输入ShadowSocks需要侦听的端口号(1984)：" PORT
 
@@ -253,7 +314,7 @@ install_shadowsocks(){
     sudo docker run -dt --name ss \
         --restart=always \
         -p "${PORT}:${PORT}" mritd/shadowsocks \
-        -s "-s ${BIND_IP} -p ${PORT} -m aes-256-gcm -k ${PASS} --fast-open"
+        -s "-s ${BIND_IP} -p ${PORT} -m aes-256-cfb -k ${PASS} --fast-open"
 }
 
 install_vpn(){
@@ -288,12 +349,14 @@ install_brook(){
     echo "如需继续，请手动查阅官方项目：https://github.com/txthinking/brook"
 }
 
+# TODO: install v2ray
+
 init(){
     VERSION_CURR=$(uname -r | awk -F '-' '{print $1}')
     VERSION_MIN="4.9.0"
 
-    OIFS=$IFS
-    IFS=','
+    OIFS=$IFS  # Save the current IFS (Internal Field Separator)
+    IFS=','    # New IFS
 
     COLUMNS=50
     echo -e "\n菜单选项\n"
@@ -305,11 +368,12 @@ init(){
         select opt in "安装 TCP BBR 拥塞控制算法" \
                     "安装 Docker 服务程序" \
                     "创建 SSL 证书" \
+                    "安装 Hysteria2 代理服务" \
+                    "安装 Trojan-Go 服务" \
                     "安装 Gost HTTP/2 代理服务" \
                     "安装 ShadowSocks 代理服务" \
                     "安装 VPN/L2TP 服务" \
                     "安装 Brook 代理服务" \
-                    "安装 Trojan-Go 服务" \
                     "创建证书更新 CronJob" \
                     "退出" ; do
 
@@ -324,26 +388,30 @@ init(){
                 break
             elif (( REPLY == 3 )) ; then
                 create_cert
+                #loop=1
                 break
             elif (( REPLY == 4 )) ; then
-                install_gost_http2
+                install_hysteria2
                 break
-            elif (( REPLY == 5  )) ; then
-                install_shadowsocks
-                break
-            elif (( REPLY == 6 )) ; then
-                install_vpn
-                break
-            elif (( REPLY == 7 )) ; then
-                install_brook
-                break
-            elif (( REPLY == 8 )) ; then
+            elif (( REPLY == 5 )) ; then
                 install_trojan_go
                 break
+            elif (( REPLY == 6 )) ; then
+                install_gost_http2
+                break
+            elif (( REPLY == 7 )) ; then
+                install_shadowsocks
+                break
+            elif (( REPLY == 8 )) ; then
+                install_vpn
+                break
             elif (( REPLY == 9 )) ; then
-                create_cron_job
+                install_brook
                 break
             elif (( REPLY == 10 )) ; then
+                create_cron_job
+                break
+            elif (( REPLY == 11 )) ; then
                 exit
             else
                 echo -e "${COLOR_ERROR}Invalid option. Try another one.${COLOR_NONE}"
@@ -352,7 +420,7 @@ init(){
     done
 
     echo "${opt}"
-    IFS=$OIFS
+    IFS=$OIFS  # Restore the IFS
 }
 
 init
